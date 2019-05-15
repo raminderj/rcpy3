@@ -19,7 +19,7 @@ ADD . /app
 
 RUN pip install . && pip install unittest2
 
-RUN mkdir /tmp/defaulthome && mkdir /tmp/ncfhome && groupadd -g 9999 testmkhomedir && useradd -M -p 12345 -d /tmp/defaulthome/howdydoody howdydoody
+RUN mkdir /tmp/defaulthome && mkdir /tmp/ncfhome && groupadd -g 9999 testmkhomedir && useradd -M -p 12345 -d /tmp/defaulthome/home99/howdydoody howdydoody
 
 ENV DEFAULT_HOME_ROOT=/tmp/defaulthome NCF_HOME_ROOT=/tmp/ncfhome
 

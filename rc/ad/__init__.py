@@ -290,13 +290,13 @@ class Connection(object):
         else:
             expdate = str(dt_to_filetime(expdate.replace(tzinfo=utc)))
 
-        self.setAttributes(dn, accountExpires=str(expdate))
+        self.setAttributes(dn, accountExpires=[expdate.encode('utf-8')])
 
     def requirePasswordReset(self, dn):
         '''
         Ensure that a password must be reset
         '''
-        self.setAttributes(dn, pwdLastSet='0')
+        self.setAttributes(dn, pwdLastSet=[b'0'])
 
     def addUsersToGroups(self, userdns, groupdns):
         '''
