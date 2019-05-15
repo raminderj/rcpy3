@@ -292,7 +292,7 @@ def addToInstrumentGroup(conn, user, group):
         if len(result) == 0:
             raise UserException('Unable to find group with name %s' % group)
 
-        groupdn = result[0][0].decode('utf-8')
+        groupdn = result[0][0]
 
     addToGroup(conn, user, groupdn)
 
@@ -347,7 +347,7 @@ def getManagedGroups(conn, user):
 
     if 'managedObjects' in result[0][1]:
         for groupdn in result[0][1]['managedObjects']:
-            groupdata = groupdata + conn.search(domain=ad.GROUP_DOMAIN, objectclass='Group', distinguishedName=groupdn.decode('utf-8'))
+            groupdata = groupdata + conn.search(domain=ad.GROUP_DOMAIN, objectclass='Group', distinguishedName=groupdn)
 
     return groupdata
 
@@ -362,14 +362,14 @@ def getPiLabGroups(conn, pi):
     groups = getManagedGroups(conn, pi)
 
     if len(groups) == 1:
-        return [(groups[0][0], groups[0][1]['gidNumber'][0].decode('utf-8'), groups[0][1]['cn'][0].decode('utf-8'))]
+        return [(groups[0][0], groups[0][1]['gidNumber'][0], groups[0][1]['cn'][0])]
     elif len(groups) > 1:
         result = []
         for group in groups:
-            if '_lab' in group[1]['cn'][0].decode('utf-8').lower():
+            if '_lab' in group[1]['cn'][0].lower():
                 if 'gidNumber' not in group[1]:
-                    raise Exception('Group %s does not have a gidNumber' % group[1]['cn'][0].decode('utf-8'))
-                result.append((group[0], group[1]['gidNumber'][0].decode('utf-8'), group[1]['cn'][0].decode('utf-8')))
+                    raise Exception('Group %s does not have a gidNumber' % group[1]['cn'][0])
+                result.append((group[0], group[1]['gidNumber'][0], group[1]['cn'][0]))
         return result
     else:
         return None
@@ -440,7 +440,7 @@ def setPrimaryGroup(conn, user, pi=None, groupdn=None, gid=None):
 #             gidNumber = '402738'
 #             group_dn = 'CN=external_users,OU=External,OU=Domain Groups,DC=rc,DC=domain'
 
-    conn.setAttributes(userdn, msSFU30NisDomain=[DEFAULT_NIS_DOMAIN.encode('utf-8')], gidNumber=[pgroupgid.encode('utf-8')])
+    conn.setAttributes(userdn, msSFU30NisDomain=DEFAULT_NIS_DOMAIN, gidNumber=pgroupgid)
     conn.addUsersToGroups(userdn, pgroupdn)
 
     return (pgroupgid, pgroupdn)
@@ -471,21 +471,21 @@ def makeHomedir(conn, user, home=None, skeldir=None):
     if len(userdata) < 1:
         raise UserException('User %s does not exist in the system' % user)
 
-    username = userdata[0][1]['sAMAccountName'][0].decode('utf-8')
+    username = userdata[0][1]['sAMAccountName'][0]
 
     # Make sure she has a uidNumber and gidNumber
     if 'uidNumber' not in userdata[0][1] or len(userdata[0][1]['uidNumber']) == 0:
         raise UserException('User %s has no uid set.' % userdn)
-    uid = int(userdata[0][1]['uidNumber'][0].decode('utf-8'))
+    uid = int(userdata[0][1]['uidNumber'][0])
 
     if 'gidNumber' not in userdata[0][1] or len(userdata[0][1]['gidNumber']) == 0:
         raise UserException('User %s has no primary group set.' % userdn)
-    gid = int(userdata[0][1]['gidNumber'][0].decode('utf-8'))
+    gid = int(userdata[0][1]['gidNumber'][0])
 
     # Get the group name from the username.  Needed later for chowning.
     groupname = getUnixUserPrimaryGroup(username)
 
-    oldhome = userdata[0][1]['unixHomeDirectory'][0].decode('utf-8')
+    oldhome = userdata[0][1]['unixHomeDirectory'][0]
 
     # If home and skeldir are not explicitly set, either 1) use the homedir set in the attribute (if it's not /dev/null (DEFAULT_UNIX_HOME)
     # or 2) generate a new one
@@ -495,10 +495,10 @@ def makeHomedir(conn, user, home=None, skeldir=None):
             # Must have been set by another process.  We'll let it stand.
             home = oldhome
         else:
-            home = generateHomedirPath(username, [m.decode('utf-8') for m in userdata[0][1]['memberOf']])
+            home = generateHomedirPath(username, userdata[0][1]['memberOf'])
 
         # If it's an NCF user
-        if NCF_USER_GROUP_DN in [m.decode('utf-8') for m in userdata[0][1]['memberOf']]:
+        if NCF_USER_GROUP_DN in userdata[0][1]['memberOf']:
             skeldir = NCF_SKELDIR
         else:
             skeldir = DEFAULT_SKELDIR
@@ -524,7 +524,7 @@ def makeHomedir(conn, user, home=None, skeldir=None):
 
     except Exception as e:
         # If directory creation fails, set back to the old one.
-        conn.setAttributes(userdn, unixHomeDirectory=[oldhome.encode('utf-8')])
+        conn.setAttributes(userdn, unixHomeDirectory=[oldhome])
         if removehome and os.path.exists(home):
             shutil.rmtree(home, ignore_errors=True)
 
@@ -615,7 +615,7 @@ def setHomedirAttribute(conn, user, home):
     userdn = user
     if not userdn.upper().startswith('CN='):
         userdn = usernameToDn(conn, user)
-    conn.setAttributes(userdn, unixHomeDirectory=[home.encode('utf-8')])
+    conn.setAttributes(userdn, unixHomeDirectory=[home])
 
 
 def initHomedir(home, username, groupname, skeldir=None):
@@ -686,7 +686,7 @@ def enableUser(conn, user):
     if not user.upper().startswith('CN='):
         userdn = usernameToDn(conn, user)
 
-    conn.setAttributes(userdn, userAccountControl=[b'512'])
+    conn.setAttributes(userdn, userAccountControl='512')
 
 
 def enableNewUser(conn, userdn, ou):
@@ -820,7 +820,7 @@ def makePiLabGroupName(conn, piusername):
 
     # Lab name is lower case last name_lab or can be passed as a parameter
     # Gotta convert to unicode, then normalize
-    lastname = pidata[0][1]['sn'][0].decode('utf-8')
+    lastname = pidata[0][1]['sn'][0]
     lastname = re.sub(r'[ \-,]+', '_', lastname)
     labname = '%s_lab' % unicodedata.normalize('NFKD', lastname.lower()).encode('ascii', 'ignore')
 
@@ -853,7 +853,7 @@ def createLabGroup(conn, **kwargs):
     pidn = usernameToDn(conn, piusername)
 
     department = str(kwargs['department'].strip())
-    description = kwargs.get('description', '').encode('utf8')
+    description = kwargs.get('description', '')
 
     if 'groupdn' in kwargs and kwargs['groupdn'] is not None and kwargs['groupdn'].strip() != '':
         groupdn = kwargs['groupdn'].strip()

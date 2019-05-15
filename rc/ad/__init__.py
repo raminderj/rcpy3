@@ -206,6 +206,20 @@ class Connection(object):
             rtype, rdata, rmsgid, serverctrls = self.conn.result3(msgid, resp_ctrl_classes=known_ldap_resp_ctrls)
 
             for dn, atts in rdata:
+                if isinstance(atts, list):
+                    for i, j in enumerate(atts):
+                        if not isinstance(atts[i], str):
+                            for k, l in atts[i].items():
+                                atts[i][k] = l.decode('utf-8')
+                elif isinstance(atts, dict):
+                    for k, l in atts.items():
+                        if k not in ['objectGUID', 'objectSid']:
+                            if isinstance(l, list):
+                                for i, v in enumerate(l):
+                                    try:
+                                        atts[k][i] = v.strip().decode('utf-8')
+                                    except Exception as e:
+                                        print('Error processing %s\n%s' % (k, str(e)))
                 result.append([dn, atts])
 
             pctrls = [
@@ -261,8 +275,14 @@ class Connection(object):
         '''
         mods = []
         for key, val in kwargs.items():
-            if not isinstance(val, list):
-                val = [str(val)]
+            if not isinstance(val, (bytes, bytearray)):
+                if not isinstance(val, list):
+                    val = [str(val).encode('utf-8')]
+                else:
+                    for i, v in enumerate(val):
+                        if not isinstance(v, str):
+                            v = str(v)
+                        val[i] = v.encode('utf-8')
             mods.append((ldap.MOD_REPLACE, key, val))
 
         self.conn.modify_s(dn, mods)
@@ -290,13 +310,13 @@ class Connection(object):
         else:
             expdate = str(dt_to_filetime(expdate.replace(tzinfo=utc)))
 
-        self.setAttributes(dn, accountExpires=[expdate.encode('utf-8')])
+        self.setAttributes(dn, accountExpires=[expdate])
 
     def requirePasswordReset(self, dn):
         '''
         Ensure that a password must be reset
         '''
-        self.setAttributes(dn, pwdLastSet=[b'0'])
+        self.setAttributes(dn, pwdLastSet=['0'])
 
     def addUsersToGroups(self, userdns, groupdns):
         '''

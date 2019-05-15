@@ -59,13 +59,13 @@ class Test(unittest.TestCase):
         # Check the attrs
         attrs = result[0][1]
         for k in ['mail', 'cn', 'title', 'department', 'telephoneNumber']:
-            self.assertTrue(attrs[k][0] == NEWUSER[k].encode('utf-8'), '%s from AD, %s, does not match expected value %s' % (k, attrs[k], NEWUSER[k]))
+            self.assertTrue(attrs[k][0] == NEWUSER[k], '%s from AD, %s, does not match expected value %s' % (k, attrs[k], NEWUSER[k]))
 
         # Check the expiration date
-        self.assertTrue(attrs['accountExpires'][0] == b'132223104000000000', 'Incorrect account expiration: %s' % attrs['accountExpires'][0])
+        self.assertTrue(attrs['accountExpires'][0] == '132223104000000000', 'Incorrect account expiration: %s' % attrs['accountExpires'][0])
 
         # Check that password must be reset
-        self.assertTrue(attrs['pwdLastSet'][0] == b'0', 'Incorrect pwdLastSet value: %s' % attrs['pwdLastSet'][0])
+        self.assertTrue(attrs['pwdLastSet'][0] == '0', 'Incorrect pwdLastSet value: %s' % attrs['pwdLastSet'][0])
 
         # Remove the user when done
         user.deleteUser(c, dn)

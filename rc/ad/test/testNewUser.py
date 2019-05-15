@@ -114,14 +114,14 @@ class Test(unittest.TestCase):
         # Check the attrs
         attrs = result[0][1]
         for k in ['mail', 'title', 'department', 'telephoneNumber']:
-            self.assertTrue(attrs[k][0] == NEWUSER[k].encode('utf-8'), '%s from AD, %s, does not match expected value %s' % (k, attrs[k], NEWUSER[k]))
-        self.assertTrue(attrs['cn'][0] == NEWUSERCLEANCN.encode('utf-8'), 'Incorrect cn: %s, should be %s' % (attrs['cn'][0], NEWUSERCLEANCN))
+            self.assertTrue(attrs[k][0] == NEWUSER[k], '%s from AD, %s, does not match expected value %s' % (k, attrs[k], NEWUSER[k]))
+        self.assertTrue(attrs['cn'][0] == NEWUSERCLEANCN, 'Incorrect cn: %s, should be %s' % (attrs['cn'][0], NEWUSERCLEANCN))
 
         # Check the expiration date
-        self.assertTrue(attrs['accountExpires'][0] == b'132223104000000000', 'Incorrect account expiration: %s' % attrs['accountExpires'][0])
+        self.assertTrue(attrs['accountExpires'][0] == '132223104000000000', 'Incorrect account expiration: %s' % attrs['accountExpires'][0])
 
         # Check that password must be reset
-        self.assertTrue(attrs['pwdLastSet'][0] == b'0', 'Incorrect pwdLastSet value: %s' % attrs['pwdLastSet'][0])
+        self.assertTrue(attrs['pwdLastSet'][0] == '0', 'Incorrect pwdLastSet value: %s' % attrs['pwdLastSet'][0])
 
         # Remove the user when done
         user.deleteUser(c, dn)
@@ -138,12 +138,12 @@ class Test(unittest.TestCase):
         # Make sure the user isn't in the group to begin with
         user.removeFromGroup(c, EXISTINGUSER['username'], TESTGROUP['name'])
         result = c.search(sAMAccountName=EXISTINGUSER['username'])
-        self.assertTrue(TESTGROUP['distinguishedName'].encode('utf-8') not in result[0][1]['memberOf'], 'Cannot seem to remove the group!?!?')
+        self.assertTrue(TESTGROUP['distinguishedName'] not in result[0][1]['memberOf'], 'Cannot seem to remove the group!?!?')
 
         user.addToGroup(c, EXISTINGUSER['username'], TESTGROUP['name'])
 
         result = c.search(sAMAccountName=EXISTINGUSER['username'])
-        self.assertTrue(TESTGROUP['distinguishedName'].encode('utf-8') in result[0][1]['memberOf'], 'User %s should be a member of group %s, but is not.' % (EXISTINGUSER['username'], TESTGROUP['name']))
+        self.assertTrue(TESTGROUP['distinguishedName'] in result[0][1]['memberOf'], 'User %s should be a member of group %s, but is not.' % (EXISTINGUSER['username'], TESTGROUP['name']))
         user.removeFromGroup(c, EXISTINGUSER['username'], TESTGROUP['name'])
 
     def testEnableNewUser(self):
@@ -154,7 +154,7 @@ class Test(unittest.TestCase):
         userdn = user.addNewAccount(c, **NEWUSER)
         result = c.search(distinguishedName=userdn)
         self.assertTrue(result[0][0] == userdn, 'Retrieved wrong user')
-        self.assertTrue(result[0][1]['userAccountControl'][0] == b'514', 'Initial account control incorrect')
+        self.assertTrue(result[0][1]['userAccountControl'][0] == '514', 'Initial account control incorrect')
         self.assertTrue(user.NEW_ACCOUNT_OU in result[0][0], 'User not in new account OU?!?!?')
 
         # Got to set a password before you can enable
@@ -163,7 +163,7 @@ class Test(unittest.TestCase):
         newou = 'OU=EPS,%s' % user.USER_DOMAIN
         user.enableNewUser(c, userdn, newou)
         result = c.search(sAMAccountName=NEWUSER['username'])
-        self.assertTrue(result[0][1]['userAccountControl'][0] == b'512', 'User did not get enabled')
+        self.assertTrue(result[0][1]['userAccountControl'][0] == '512', 'User did not get enabled')
         newdn = 'CN=%s,%s' % (NEWUSERCLEANCN, newou)
         self.assertTrue(result[0][0] == newdn, 'User dn is %s, but should be %s' % (result[0][0], newdn))
 
@@ -190,12 +190,12 @@ class Test(unittest.TestCase):
         user.setPrimaryGroup(c, userdn)
         result = c.search(distinguishedName=userdn)
         expdate = result[0][1]['accountExpires'][0]
-        self.assertTrue(expdate == b'132223104000000000', 'Incorrect expdate %s' % expdate)
+        self.assertTrue(expdate == '132223104000000000', 'Incorrect expdate %s' % expdate)
 
         # Unexpire it
         user.setExpirationDate(c, userdn, expdate=None)
         result = c.search(distinguishedName=userdn)
-        expdate = result[0][1]['accountExpires'][0].decode('utf-8')
+        expdate = result[0][1]['accountExpires'][0]
         expdatetime = filetime_to_dt(int(expdate))
         self.assertTrue(expdatetime.year == 1601, 'Incorrect expiration date year %s' % str(expdatetime.year))
 
@@ -206,7 +206,7 @@ class Test(unittest.TestCase):
         userdn = user.addNewAccount(c, **LOCALUSER)
         user.setPrimaryGroup(c, userdn)
         result = c.search(distinguishedName=userdn)
-        expdate = result[0][1]['accountExpires'][0].decode('utf-8')
+        expdate = result[0][1]['accountExpires'][0]
         expdatetime = filetime_to_dt(int(expdate))
         self.assertTrue(expdatetime.year == 1601, 'Incorrect expiration date year %s' % str(expdatetime.year))
         user.deleteUser(c, userdn)
@@ -236,7 +236,7 @@ class Test(unittest.TestCase):
         userdn = user.addNewAccount(c, **NEWUSER)
         user.setPrimaryGroup(c, userdn)
         result = c.search(distinguishedName=userdn)
-        self.assertTrue(result[0][1]['gidNumber'][0].decode('utf-8') == user.DEFAULT_PRIMARY_GROUP_ID, 'User gidNumber should be %s, but it is %s' % (user.DEFAULT_PRIMARY_GROUP_ID, result[0][1]['gidNumber'][0]))
+        self.assertTrue(result[0][1]['gidNumber'][0] == user.DEFAULT_PRIMARY_GROUP_ID, 'User gidNumber should be %s, but it is %s' % (user.DEFAULT_PRIMARY_GROUP_ID, result[0][1]['gidNumber'][0]))
 
         # Add groups
         c.add(NEWLABGROUPDN, NEWLABGROUP_ATTRS)
@@ -245,21 +245,18 @@ class Test(unittest.TestCase):
 
         # Add the PI and set to the lab group PI
         pidn = user.addNewAccount(c, **NEWPI)
-        print('created new pi %s' % pidn)
         result = c.search(distinguishedName=pidn)
         self.assertTrue(result[0][0] == pidn, 'Error retrieving new pi.')
 
         c.addUsersToGroups(pidn, NEWLABGROUPDN)
-        c.setAttributes(NEWLABGROUPDN, managedBy=[pidn.encode('utf-8')])
+        c.setAttributes(NEWLABGROUPDN, managedBy=pidn)
         result = c.search(distinguishedName=pidn)
-        # for k in sorted(result[0][1].keys()):
-        #     print('%s: %s' % (k, ','.join([m.decode('utf-8') for m in result[0][1][k]])))
 
         # Set the primary group using the specified groupdn and gidnumber
         user.setPrimaryGroup(c, userdn, groupdn=NEWLABGROUPDN, gid=NEWLABGROUPGID)
         result = c.search(distinguishedName=userdn)
-        self.assertTrue(result[0][1]['gidNumber'][0].decode('utf-8') == NEWLABGROUPGID, 'gidNumber should be %s, but it is %s' % (NEWLABGROUPGID, result[0][1]['gidNumber'][0]))
-        self.assertTrue(result[0][1]['memberOf'][0].decode('utf-8') == NEWLABGROUPDN, 'Lab group membership is not correct: %s' % (','.join([m.decode('utf-8') for m in result[0][1]['memberOf']])))
+        self.assertTrue(result[0][1]['gidNumber'][0] == NEWLABGROUPGID, 'gidNumber should be %s, but it is %s' % (NEWLABGROUPGID, result[0][1]['gidNumber'][0]))
+        self.assertTrue(result[0][1]['memberOf'][0] == NEWLABGROUPDN, 'Lab group membership is not correct: %s' % ','.join(result[0][1]['memberOf']))
 
         # Delete user and set primaryGroup via PI with multiple groups
         c.delete(userdn)
@@ -268,16 +265,14 @@ class Test(unittest.TestCase):
         c.add(NONLABGROUPDN, NONLABGROUP_ATTRS)
         result = c.search(distinguishedName=NONLABGROUPDN, domain=ad.GROUP_DOMAIN, objectclass='Group')
         self.assertTrue(result[0][0] == NONLABGROUPDN, 'Error retrieving new lab group %s' % NONLABGROUPDN)
-        c.setAttributes(NONLABGROUPDN, managedBy=[pidn.encode('utf-8')])
+        c.setAttributes(NONLABGROUPDN, managedBy=pidn)
         result = c.search(distinguishedName=pidn)
-        print(pidn)
-        print('\n'.join([m.decode('utf-8') for m in result[0][1]['managedObjects']]))
-        self.assertTrue(len(result[0][1]['managedObjects']) == 2, 'PI is not managing the right objects: %s' % ','.join([m.decode('utf-8') for m in result[0][1]['managedObjects']]))
+        self.assertTrue(len(result[0][1]['managedObjects']) == 2, 'PI is not managing the right objects: %s' % ','.join(result[0][1]['managedObjects']))
 
         user.setPrimaryGroup(c, userdn, pidn)
         result = c.search(distinguishedName=userdn)
-        self.assertTrue(result[0][1]['gidNumber'][0].decode('utf-8') == NEWLABGROUPGID, 'gidNumber should be %s, but it is %s' % (NEWLABGROUPGID, result[0][1]['gidNumber'][0]))
-        self.assertTrue(result[0][1]['memberOf'][0].decode('utf-8') == NEWLABGROUPDN, 'Lab group membership is not correct: %s' % (','.join([m.decode('utf-8') for m in result[0][1]['memberOf']])))
+        self.assertTrue(result[0][1]['gidNumber'][0] == NEWLABGROUPGID, 'gidNumber should be %s, but it is %s' % (NEWLABGROUPGID, result[0][1]['gidNumber'][0]))
+        self.assertTrue(result[0][1]['memberOf'][0] == NEWLABGROUPDN, 'Lab group membership is not correct: %s' % ','.join(result[0][1]['memberOf']))
 
         c.delete(userdn)
         c.delete(pidn)

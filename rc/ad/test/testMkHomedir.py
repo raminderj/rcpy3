@@ -150,7 +150,7 @@ class Test(unittest.TestCase):
 
         # Initially the default
         result = c.search(distinguishedName=userdn)
-        self.assertTrue(result[0][1]['unixHomeDirectory'][0].decode('utf-8') == user.DEFAULT_UNIX_HOME, 'Incorrect default home dir set: %s' % result[0][1]['unixHomeDirectory'][0])
+        self.assertTrue(result[0][1]['unixHomeDirectory'][0] == user.DEFAULT_UNIX_HOME, 'Incorrect default home dir set: %s' % result[0][1]['unixHomeDirectory'][0])
 
         user.setPrimaryGroup(c, userdn, groupdn=USELESS_GROUP_DN, gid=USELESS_GID)
 
@@ -179,11 +179,11 @@ class Test(unittest.TestCase):
         self.assertTrue(userdn == 'CN=%s,%s' % (NEWUSER['cn'], user.NEW_ACCOUNT_OU), 'Returned dn was incorrect: %s' % userdn)
 
         result = c.search(distinguishedName=userdn)
-        self.assertTrue(result[0][1]['unixHomeDirectory'][0].decode('utf-8') == user.DEFAULT_UNIX_HOME, 'Incorrect default home dir set: %s' % result[0][1]['unixHomeDirectory'][0])
+        self.assertTrue(result[0][1]['unixHomeDirectory'][0] == user.DEFAULT_UNIX_HOME, 'Incorrect default home dir set: %s' % result[0][1]['unixHomeDirectory'][0])
 
         # Set unixHomeDirectory to an appropriate value
         home = os.path.join(user.DEFAULT_HOME_ROOT, GOOD_HOME, NEWUSER['username'])
-        c.setAttributes(userdn, unixHomeDirectory=[home.encode('utf-8')])
+        c.setAttributes(userdn, unixHomeDirectory=home)
         # Set a primary group
         user.setPrimaryGroup(c, userdn, groupdn=USELESS_GROUP_DN, gid=USELESS_GID)
         # Make sure he's in a cluster user group
@@ -208,7 +208,7 @@ class Test(unittest.TestCase):
         self.assertTrue(dn == 'CN=%s,%s' % (NEWUSER['cn'], user.NEW_ACCOUNT_OU), 'Returned dn was incorrect: %s' % dn)
 
         result = c.search(distinguishedName=dn)
-        self.assertTrue(result[0][1]['unixHomeDirectory'][0].decode('utf-8') == user.DEFAULT_UNIX_HOME, 'Incorrect default home dir set: %s' % result[0][1]['unixHomeDirectory'][0])
+        self.assertTrue(result[0][1]['unixHomeDirectory'][0] == user.DEFAULT_UNIX_HOME, 'Incorrect default home dir set: %s' % result[0][1]['unixHomeDirectory'][0])
         # Fail because primary group is not set
         try:
             user.makeHomedir(c, dn)
@@ -238,7 +238,7 @@ class Test(unittest.TestCase):
 
         # Make sure it is still the old default after the error
         result = c.search(distinguishedName=dn)
-        self.assertTrue(result[0][1]['unixHomeDirectory'][0].decode('utf-8') == user.DEFAULT_UNIX_HOME, 'Incorrect default home dir set: %s' % result[0][1]['unixHomeDirectory'][0])
+        self.assertTrue(result[0][1]['unixHomeDirectory'][0] == user.DEFAULT_UNIX_HOME, 'Incorrect default home dir set: %s' % result[0][1]['unixHomeDirectory'][0])
 
         self.removeAllTheHomes()
 
@@ -251,7 +251,7 @@ class Test(unittest.TestCase):
 
         # Make sure it is still the old default after the error
         result = c.search(distinguishedName=dn)
-        self.assertTrue(result[0][1]['unixHomeDirectory'][0].decode('utf-8') == user.DEFAULT_UNIX_HOME, 'Incorrect default home dir set: %s' % result[0][1]['unixHomeDirectory'][0])
+        self.assertTrue(result[0][1]['unixHomeDirectory'][0] == user.DEFAULT_UNIX_HOME, 'Incorrect default home dir set: %s' % result[0][1]['unixHomeDirectory'][0])
 
         # Fail because the skel dir doesn't exist
         try:
@@ -262,7 +262,7 @@ class Test(unittest.TestCase):
 
         # Make sure it is still the old default after the error
         result = c.search(distinguishedName=dn)
-        self.assertTrue(result[0][1]['unixHomeDirectory'][0].decode('utf-8') == user.DEFAULT_UNIX_HOME, 'Incorrect default home dir set: %s' % result[0][1]['unixHomeDirectory'][0])
+        self.assertTrue(result[0][1]['unixHomeDirectory'][0] == user.DEFAULT_UNIX_HOME, 'Incorrect default home dir set: %s' % result[0][1]['unixHomeDirectory'][0])
 
         goodhome = os.path.join(user.DEFAULT_HOME_ROOT, GOOD_HOME, NEWUSER['username'])
         # Set to a usable primary group
@@ -270,7 +270,7 @@ class Test(unittest.TestCase):
         user.setPrimaryGroup(c, dn, groupdn=USELESS_GROUP_DN, gid=NEWUSER_GROUP['gid'])
 
         # Set the uidnumber for the user
-        c.setAttributes(dn, uidNumber=[NEWUSERUID.encode('utf-8')])
+        c.setAttributes(dn, uidNumber=NEWUSERUID)
 
         # Make a home dir for real
         user.makeHomedir(c, dn, home=goodhome, skeldir=GOOD_SKEL)

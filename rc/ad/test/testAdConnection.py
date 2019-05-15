@@ -117,7 +117,7 @@ class Test(unittest.TestCase):
         userdata = c.search(sAMAccountName=GOODUSERNAME)
         self.assertTrue(len(userdata) == 1, 'Wrong number of results returned: %d' % len(userdata))
         self.assertTrue(userdata[0][0] == GOODUSERDN, 'Wrong user returned: %s' % userdata[0][0])
-        self.assertTrue(userdata[0][1]['sAMAccountName'][0] == bytes(GOODUSERNAME.encode('utf-8')), 'Wrong username returned: %s' % userdata[0][1]['sAMAccountName'])
+        self.assertTrue(userdata[0][1]['sAMAccountName'][0] == GOODUSERNAME, 'Wrong username returned: %s' % userdata[0][1]['sAMAccountName'])
 
     def testGroupSearch(self):
         '''
@@ -138,21 +138,19 @@ class Test(unittest.TestCase):
         c = ad.Connection(BINDDN, BINDPW, MODSERVER)
         [user] = c.search(distinguishedName=GOODUSERDN)
         self.assertTrue(user[0] == GOODUSERDN, 'User search failed')
-        for g in user[1]['memberOf']:
-            print(g)
-        self.assertTrue(bytes(ADDGROUPDN.encode('utf-8')) not in user[1]['memberOf'], 'Group %s found in group list\n' % ADDGROUPDN)
+        self.assertTrue(ADDGROUPDN not in user[1]['memberOf'], 'Group %s found in group list\n' % ADDGROUPDN)
 
         # Add user to group
         c.addUsersToGroups(GOODUSERDN, ADDGROUPDN)
         [user] = c.search(distinguishedName=GOODUSERDN)
         self.assertTrue(user[0] == GOODUSERDN, 'User search failed')
-        self.assertTrue(bytes(ADDGROUPDN.encode('utf-8')) in user[1]['memberOf'], 'Group %s found in group list\n' % ADDGROUPDN)
+        self.assertTrue(ADDGROUPDN in user[1]['memberOf'], 'Group %s found in group list\n' % ADDGROUPDN)
 
         # Remove user from group
         c.removeUsersFromGroups(GOODUSERDN, ADDGROUPDN)
         [user] = c.search(distinguishedName=GOODUSERDN)
         self.assertTrue(user[0] == GOODUSERDN, 'User search failed')
-        self.assertTrue(bytes(ADDGROUPDN.encode('utf-8')) not in user[1]['memberOf'], 'Group %s found in group list\n' % ADDGROUPDN)
+        self.assertTrue(ADDGROUPDN not in user[1]['memberOf'], 'Group %s found in group list\n' % ADDGROUPDN)
 
     def testLargeGroupSearch(self):
         '''
@@ -163,7 +161,7 @@ class Test(unittest.TestCase):
         users = c.search(memberOf=LARGEGROUPDN)
         self.assertTrue(len(users) > ad.PAGESIZE, 'Group %s has %d members, but should have more than %d' % (LARGEGROUPDN, len(users), ad.PAGESIZE))
         for user in users:
-            self.assertTrue(bytes(LARGEGROUPDN.encode('utf-8')) in user[1]['memberOf'], 'User %s is was erroneously returned in search of %s' % (user[0], LARGEGROUPDN))
+            self.assertTrue(LARGEGROUPDN in user[1]['memberOf'], 'User %s is was erroneously returned in search of %s' % (user[0], LARGEGROUPDN))
 
 
 if __name__ == "__main__":
