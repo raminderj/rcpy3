@@ -37,6 +37,14 @@ logger = logging.getLogger(__name__)
 
 portre = re.compile(r':\d+$')
 
+SKIP_ATTRS = [
+    'mSMQSignCertificates',
+    'terminalServer',
+    'mSMQDigests',
+    'objectGUID',
+    'logonHours',
+]
+
 
 def readLdapConf(conffile='/etc/ldap.conf'):
     '''
@@ -290,7 +298,7 @@ class Connection(object):
                                 atts[i][k] = l.decode('utf-8')
                 elif isinstance(atts, dict):
                     for k, l in atts.items():
-                        if k not in ['objectGUID','logonHours']:
+                        if k not in SKIP_ATTRS:
                             if k == 'objectSid':
                                 atts[k][0] = sid_byte_to_string(atts[k][0])
                             elif isinstance(l, list):
