@@ -232,7 +232,7 @@ class Connection(object):
         Search over all group domains
         '''
         result = []
-        for domain in [GROUP_DOMAIN, AFFILIATIONS_DOMAIN, INSTRUMENT_DOMAIN]:
+        for domain in [GLOBAL_DOMAIN]:
             result.extend(self.search(domain=domain, objectclass='group', **kwargs))
         return result
 
