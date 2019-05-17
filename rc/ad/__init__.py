@@ -31,11 +31,9 @@ DEFAULTLDAPPORT = '636'
 # Size of pages for paged queries
 PAGESIZE = 100
 
-level = logging.INFO
-if os.environ.get('AD_DEBUG') is not None:
-    level = logging.DEBUG
-logging.basicConfig(level=level)
-logger = logging.getLogger('portal')
+loglevel = os.environ.get('RCPY3_LOGLEVEL', 'ERROR')
+logging.basicConfig(level=logging.getLevelName(loglevel))
+logger = logging.getLogger(__name__)
 
 portre = re.compile(r':\d+$')
 
@@ -292,7 +290,7 @@ class Connection(object):
                                 atts[i][k] = l.decode('utf-8')
                 elif isinstance(atts, dict):
                     for k, l in atts.items():
-                        if k != 'objectGUID':
+                        if k not in ['objectGUID','logonHours']:
                             if k == 'objectSid':
                                 atts[k][0] = sid_byte_to_string(atts[k][0])
                             elif isinstance(l, list):
@@ -300,7 +298,7 @@ class Connection(object):
                                     try:
                                         atts[k][i] = v.strip().decode('utf-8')
                                     except Exception as e:
-                                        print('Error processing %s\n%s' % (k, str(e)))
+                                        logger.error('Error processing %s\n%s' % (k, str(e)))
                 result.append([dn, atts])
 
             pctrls = [
