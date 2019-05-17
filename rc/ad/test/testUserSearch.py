@@ -10,7 +10,7 @@ import unittest
 from datetime import datetime
 
 from rc import ad
-from rc.ad import user
+from rc.ad import user, sid_string_to_ldap
 from rc.filetimes import filetime_to_dt
 
 BINDDN = os.environ.get('BINDDN')
@@ -72,6 +72,22 @@ class Test(unittest.TestCase):
 
         result = c.search(sAMAccountName=NEWUSER['username'])
         self.assertTrue(len(result) == 0, 'User was not deleted!')
+
+    def testSearchBySid(self):
+        '''
+        Create user, get sid, find by sid
+        '''
+        c = ad.Connection(BINDDN, BINDPW)
+        result = c.search(sAMAccountName=NEWUSER['username'])
+        self.assertTrue(len(result) == 0, 'Test user already exists!')
+        dn = user.addNewAccount(c, **NEWUSER)
+        self.assertTrue(dn == 'CN=%s,%s' % (NEWUSER['cn'], user.NEW_ACCOUNT_OU), 'Returned dn was incorrect: %s' % dn)
+
+        result = c.search(sAMAccountName=NEWUSER['username'])
+        self.assertTrue(result[0][0] == 'CN=%s,%s' % (NEWUSER['cn'], user.NEW_ACCOUNT_OU), 'Wrong dn returned: %s\nShould be %s' % (result[0][0], 'CN=%s,%s' % (NEWUSER['cn'], user.NEW_ACCOUNT_OU)))
+        sid = result[0][1]['objectSid'][0]
+        sidresult = c.search(objectSid=sid)
+        self.assertTrue(sidresult[0][0] == 'CN=%s,%s' % (NEWUSER['cn'], user.NEW_ACCOUNT_OU))
 
 
 if __name__ == "__main__":

@@ -3,9 +3,11 @@ import os
 import sys
 import re
 import traceback
+import struct
 import ldap.controls
 import ldap.filter
 import logging
+import binascii
 
 from rc import UserException
 from rc.filetimes import dt_to_filetime, utc
@@ -58,6 +60,68 @@ def readLdapConf(conffile='/etc/ldap.conf'):
                 else:
                     result[entry[0]].append(entry[1])
     return result
+
+
+def longToByte(integer, little_endian=True, size=4):
+    '''
+    Convert a Python integer into bytes
+        integer - integer to convert
+        little_endian - True (default) or False for little or big endian
+        size - size to be returned, default is 4 (thats 32bit)
+    '''
+    if little_endian:
+        return struct.pack('<q', integer)[0:size]
+    else:
+        return struct.pack('>q', integer)[8 - size:]
+
+
+def sid_byte_to_string(binary):
+    '''
+    Converts AD objectSid into a reasonable string representation
+    '''
+    version = struct.unpack('B', binary[0:1])[0]
+    # I do not know how to treat version != 1 (it does not exist yet)
+    assert version == 1, version
+    length = struct.unpack('B', binary[1:2])[0]
+    authority = struct.unpack(b'>Q', b'\x00\x00' + binary[2:8])[0]
+    string = 'S-%d-%d' % (version, authority)
+    binary = binary[8:]
+    assert len(binary) == 4 * length
+    for i in range(length):
+        value = struct.unpack('<L', binary[4 * i:4 * (i + 1)])[0]
+        string += '-%d' % value
+    return string
+
+
+def sid_string_to_byte(strsid):
+    '''
+    Convert a SID into bytes
+        strdsid - SID to convert into bytes
+    '''
+    sid = str.split(strsid, '-')
+    ret = bytearray()
+    sid.remove('S')
+    for i in range(len(sid)):
+        sid[i] = int(sid[i])
+    sid.insert(1, len(sid) - 2)
+    ret += longToByte(sid[0], size=1)
+    ret += longToByte(sid[1], size=1)
+    ret += longToByte(sid[2], False, 6)
+    for i in range(3, len(sid)):
+        ret += longToByte(sid[i])
+    return ret
+
+
+def sid_string_to_ldap(strsid):
+    '''
+    Encode a sid into AD ldap search form
+        strsid - SID to encode
+    '''
+    ret = ''
+    a = binascii.hexlify(sid_string_to_byte(strsid)).decode('utf-8')
+    for i in range(0, len(a), 2):
+        ret += '\\' + a[i:i + 2]
+    return ret
 
 
 class Connection(object):
@@ -157,6 +221,21 @@ class Connection(object):
             return
         self.conn.unbind_s()
 
+    def searchGroups(self, **kwargs):
+        '''
+        Search over all group domains
+        '''
+        result = []
+        for domain in [GROUP_DOMAIN, AFFILIATIONS_DOMAIN, INSTRUMENT_DOMAIN]:
+            result.extend(self.search(domain=domain, objectclass='group', **kwargs))
+        return result
+
+    def searchUsers(self, **kwargs):
+        '''
+        Search over user domain
+        '''
+        return self.search(domain=USER_DOMAIN, objectclass='person', **kwargs)
+
     def search(self, domain=USER_DOMAIN, objectclass='person', **kwargs):
         '''
         Search for something in AD.  None is returned for empty results.
@@ -213,8 +292,10 @@ class Connection(object):
                                 atts[i][k] = l.decode('utf-8')
                 elif isinstance(atts, dict):
                     for k, l in atts.items():
-                        if k not in ['objectGUID', 'objectSid']:
-                            if isinstance(l, list):
+                        if k != 'objectGUID':
+                            if k == 'objectSid':
+                                atts[k][0] = sid_byte_to_string(atts[k][0])
+                            elif isinstance(l, list):
                                 for i, v in enumerate(l):
                                     try:
                                         atts[k][i] = v.strip().decode('utf-8')
