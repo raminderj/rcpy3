@@ -291,23 +291,24 @@ class Connection(object):
             rtype, rdata, rmsgid, serverctrls = self.conn.result3(msgid, resp_ctrl_classes=known_ldap_resp_ctrls)
 
             for dn, atts in rdata:
-                if isinstance(atts, list):
-                    for i, j in enumerate(atts):
-                        if not isinstance(atts[i], str):
-                            for k, l in atts[i].items():
-                                atts[i][k] = l.decode('utf-8')
-                elif isinstance(atts, dict):
-                    for k, l in atts.items():
-                        if k not in SKIP_ATTRS:
-                            if k == 'objectSid':
-                                atts[k][0] = sid_byte_to_string(atts[k][0])
-                            elif isinstance(l, list):
-                                for i, v in enumerate(l):
-                                    try:
-                                        atts[k][i] = v.strip().decode('utf-8')
-                                    except Exception as e:
-                                        logger.error('Error processing %s\n%s' % (k, str(e)))
-                result.append([dn, atts])
+                if dn is not None:
+                    if isinstance(atts, list):
+                        for i, j in enumerate(atts):
+                            if not isinstance(atts[i], str):
+                                for k, l in atts[i].items():
+                                    atts[i][k] = l.decode('utf-8')
+                    elif isinstance(atts, dict):
+                        for k, l in atts.items():
+                            if k not in SKIP_ATTRS:
+                                if k == 'objectSid':
+                                    atts[k][0] = sid_byte_to_string(atts[k][0])
+                                elif isinstance(l, list):
+                                    for i, v in enumerate(l):
+                                        try:
+                                            atts[k][i] = v.strip().decode('utf-8')
+                                        except Exception as e:
+                                            logger.error('Error processing %s\n%s' % (k, str(e)))
+                    result.append([dn, atts])
 
             pctrls = [
                 c for c in serverctrls if c.controlType == ldap.controls.SimplePagedResultsControl.controlType
